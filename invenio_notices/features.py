@@ -7,10 +7,7 @@ A feature check is a no-argument callable returning ``bool``, the notice
 shows only while it returns ``True``.
 """
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from collections.abc import Callable
 
 
 def config_flag(key: str) -> Callable[[], bool]:

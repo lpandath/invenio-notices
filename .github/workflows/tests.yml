@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Graz University of Technology.
+# SPDX-License-Identifier: MIT
+
+name: CI
+
+on:
+  pull_request:
+    branches: master
+  push:
+    branches: master
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron: "0 3 * * 6"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason"
+        required: false
+        default: "Manual trigger"
+
+jobs:
+  python_tests:
+    uses: inveniosoftware/workflows/.github/workflows/tests-python.yml@master
+    with:
+      python-version: '["3.14"]'

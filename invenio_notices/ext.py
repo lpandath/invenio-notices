@@ -3,13 +3,10 @@
 
 """Flask extension for invenio-notices."""
 
-from typing import TYPE_CHECKING
+from flask import Flask
 
 from . import config
 from .services import pending_notices
-
-if TYPE_CHECKING:
-    from flask import Flask
 
 
 class InvenioNotices:
