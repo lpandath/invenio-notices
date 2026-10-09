@@ -1,0 +1,12 @@
+{#
+  SPDX-FileCopyrightText: 2026 Graz University of Technology.
+  SPDX-License-Identifier: MIT
+#}
+{%- if notices %}
+  <div id="notices"
+       data-notices="{{ notices | tojson | forceescape }}"
+       data-ack-label="{{ config.NOTICES_ACK_LABEL }}"
+       data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"></div>
+  {{ webpack['invenio-notices.css'] }}
+  {{ webpack['invenio-notices.js'] }}
+{%- endif %}
