@@ -8,7 +8,10 @@ All checks run server side, hidden notices never reach the client.
 
 from datetime import UTC, datetime
 
-from flask import current_app
+from flask import current_app, g
+from flask_login import current_user
+
+from invenio_notices.records.models import NoticeAcknowledgment
 
 
 def _as_utc(value: str) -> datetime:
@@ -17,6 +20,11 @@ def _as_utc(value: str) -> datetime:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
+
+def _current_roles() -> set[str]:
+    """Role names held by the current identity."""
+    return {need.value for need in g.identity.provides if need.method == "role"}
 
 
 class NoticesService:
@@ -33,7 +41,40 @@ class NoticesService:
         * now (UTC) is inside ``starts_at``/``ends_at``, when set,
         * it was not acknowledged yet.
         """
-        raise NotImplementedError
+        authenticated = current_user.is_authenticated
+        held = _current_roles() if authenticated else set()
+        seen = set()
+        if authenticated:
+            seen = {
+                ack.notice_key
+                for ack in NoticeAcknowledgment.query.filter_by(
+                    user_id=current_user.id,
+                )
+            }
+        notices = []
+        for notice in current_app.config.get("NOTICES", []):
+            if notice["key"] in seen:
+                continue
+            if not self._is_shown_to(notice, authenticated=authenticated):
+                continue
+            if not self._roles_match(notice.get("roles"), held):
+                continue
+            feature = notice.get("feature")
+            if feature and not self._feature_on(feature):
+                continue
+            if not self._in_time_window(notice):
+                continue
+            notices.append(
+                {
+                    "key": notice["key"],
+                    "title": str(notice["title"]),
+                    "intro": str(notice["intro"]),
+                    "items": self._visible_items(notice, held),
+                    "outro": str(notice["outro"]) if notice.get("outro") else "",
+                    "accent": bool(notice.get("accent")),
+                },
+            )
+        return notices
 
     def acknowledge(self, user_id: int, notice_key: str) -> None:
         """Record that the user acknowledged the notice."""
@@ -86,4 +127,4 @@ class NoticesService:
 
 def pending_notices() -> list[dict]:
     """Template helper, the notices for the current visitor."""
-    raise NotImplementedError
+    return NoticesService().pending()
