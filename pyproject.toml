@@ -114,4 +114,5 @@ notice-rgx = "SPDX-FileCopyrightText:"
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
   "ANN201",
+  "SLF001",
 ]

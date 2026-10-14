@@ -29,15 +29,31 @@ class NoticesService:
 
     def _is_shown_to(self, notice: dict, *, authenticated: bool) -> bool:
         """Check the notice audience (``show_to``)."""
-        raise NotImplementedError
+        show_to = notice.get("show_to", "users")
+        if show_to == "guests":
+            return not authenticated
+        if show_to == "users":
+            return authenticated
+        return True
 
     def _roles_match(self, roles: list[str] | None, held: set[str]) -> bool:
         """Check whether the visitor holds one of the required roles."""
-        raise NotImplementedError
+        return not roles or any(role in held for role in roles)
 
     def _visible_items(self, notice: dict, held: set[str]) -> list[str]:
         """Return the item texts the visitor is allowed to see."""
-        raise NotImplementedError
+        result = []
+        for item in notice["items"]:
+            if not isinstance(item, dict):
+                result.append(str(item))
+                continue
+            if not self._roles_match(item.get("roles"), held):
+                continue
+            feature = item.get("feature")
+            if feature and not self._feature_on(feature):
+                continue
+            result.append(str(item["text"]))
+        return result
 
     def _feature_on(self, name: str) -> bool:
         """Resolve a feature name via ``NOTICES_FEATURES``, unknown is off."""
