@@ -9,17 +9,19 @@ shows only while it returns ``True``.
 
 from collections.abc import Callable
 
+from flask import current_app
+
 
 def config_flag(key: str) -> Callable[[], bool]:
     """Feature is on when the config variable is truthy, flip it at go-live."""
-    raise NotImplementedError
+    return lambda: bool(current_app.config.get(key, False))
 
 
 def endpoint_exists(endpoint: str) -> Callable[[], bool]:
     """Feature is on when the route is registered, presence detection."""
-    raise NotImplementedError
+    return lambda: endpoint in current_app.view_functions
 
 
 def extension_loaded(name: str) -> Callable[[], bool]:
     """Feature is on when the Flask extension is loaded."""
-    raise NotImplementedError
+    return lambda: name in current_app.extensions

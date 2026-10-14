@@ -6,6 +6,8 @@
 All checks run server side, hidden notices never reach the client.
 """
 
+from flask import current_app
+
 
 class NoticesService:
     """Filters the configured notices and records acknowledgments."""
@@ -57,7 +59,10 @@ class NoticesService:
 
     def _feature_on(self, name: str) -> bool:
         """Resolve a feature name via ``NOTICES_FEATURES``, unknown is off."""
-        raise NotImplementedError
+        check = current_app.config.get("NOTICES_FEATURES", {}).get(name)
+        if check is None:
+            return False
+        return bool(check())
 
     def _in_time_window(self, notice: dict) -> bool:
         """Check ``starts_at``/``ends_at`` against now, in UTC."""
