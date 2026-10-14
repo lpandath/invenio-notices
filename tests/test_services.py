@@ -3,9 +3,15 @@
 
 """Service tests."""
 
+from datetime import UTC, datetime, timedelta, timezone
+
 from invenio_notices.services import NoticesService
 
 service = NoticesService()
+
+
+def _iso(delta: timedelta, tz: timezone = UTC) -> str:
+    return (datetime.now(tz=UTC) + delta).astimezone(tz).isoformat()
 
 
 def test_is_shown_to_users() -> None:
@@ -67,3 +73,33 @@ def test_visible_items_filters_by_role() -> None:
         "plain",
         "for curators",
     ]
+
+
+def test_in_time_window_without_window() -> None:
+    """A notice without starts_at/ends_at always shows."""
+    assert service._in_time_window({})
+
+
+def test_in_time_window_starts_at() -> None:
+    """A notice shows once starts_at has passed."""
+    assert service._in_time_window({"starts_at": _iso(timedelta(hours=-1))})
+    assert not service._in_time_window({"starts_at": _iso(timedelta(hours=1))})
+
+
+def test_in_time_window_ends_at() -> None:
+    """A notice stops showing after ends_at."""
+    assert service._in_time_window({"ends_at": _iso(timedelta(hours=1))})
+    assert not service._in_time_window({"ends_at": _iso(timedelta(hours=-1))})
+
+
+def test_in_time_window_handles_timezones() -> None:
+    """Offsets are converted, naive values count as UTC."""
+    vienna = timezone(timedelta(hours=1))
+    assert service._in_time_window(
+        {
+            "starts_at": _iso(timedelta(hours=-1), tz=vienna),
+            "ends_at": _iso(timedelta(hours=1), tz=vienna),
+        },
+    )
+    naive_past = (datetime.now(tz=UTC) - timedelta(hours=1)).replace(tzinfo=None)
+    assert service._in_time_window({"starts_at": naive_past.isoformat()})

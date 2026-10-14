@@ -6,7 +6,17 @@
 All checks run server side, hidden notices never reach the client.
 """
 
+from datetime import UTC, datetime
+
 from flask import current_app
+
+
+def _as_utc(value: str) -> datetime:
+    """Parse an ISO-8601 string, naive values count as UTC."""
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 class NoticesService:
@@ -66,7 +76,12 @@ class NoticesService:
 
     def _in_time_window(self, notice: dict) -> bool:
         """Check ``starts_at``/``ends_at`` against now, in UTC."""
-        raise NotImplementedError
+        now = datetime.now(tz=UTC)
+        starts_at = notice.get("starts_at")
+        if starts_at and now < _as_utc(starts_at):
+            return False
+        ends_at = notice.get("ends_at")
+        return not (ends_at and now >= _as_utc(ends_at))
 
 
 def pending_notices() -> list[dict]:
