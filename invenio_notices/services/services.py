@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from flask import current_app, g
 from flask_login import current_user
+from invenio_db import db
 
 from invenio_notices.records.models import NoticeAcknowledgment
 
@@ -78,7 +79,15 @@ class NoticesService:
 
     def acknowledge(self, user_id: int, notice_key: str) -> None:
         """Record that the user acknowledged the notice."""
-        raise NotImplementedError
+        already = NoticeAcknowledgment.query.filter_by(
+            user_id=user_id,
+            notice_key=notice_key,
+        ).count()
+        if not already:
+            db.session.add(
+                NoticeAcknowledgment(user_id=user_id, notice_key=notice_key),
+            )
+            db.session.commit()
 
     def _is_shown_to(self, notice: dict, *, authenticated: bool) -> bool:
         """Check the notice audience (``show_to``)."""
