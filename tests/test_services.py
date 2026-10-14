@@ -4,14 +4,52 @@
 """Service tests."""
 
 from datetime import UTC, datetime, timedelta, timezone
+from types import SimpleNamespace
 
-from invenio_notices.services import NoticesService
+import pytest
+from flask import Flask
+
+from invenio_notices import InvenioNotices
+from invenio_notices.services import NoticesService, pending_notices
+from invenio_notices.services import services as services_module
 
 service = NoticesService()
 
 
 def _iso(delta: timedelta, tz: timezone = UTC) -> str:
     return (datetime.now(tz=UTC) + delta).astimezone(tz).isoformat()
+
+
+def _app(**config: object) -> Flask:
+    app = Flask("testapp")
+    app.config.update(**config)
+    InvenioNotices(app)
+    return app
+
+
+def _login(monkeypatch: pytest.MonkeyPatch, roles: set[str], seen: set[str]) -> None:
+    """Fake an authenticated visitor with roles and acknowledged keys."""
+    monkeypatch.setattr(
+        services_module,
+        "current_user",
+        SimpleNamespace(is_authenticated=True, id=7),
+    )
+    monkeypatch.setattr(services_module, "_current_roles", lambda: roles)
+    acks = [SimpleNamespace(notice_key=key) for key in seen]
+    monkeypatch.setattr(
+        services_module,
+        "NoticeAcknowledgment",
+        SimpleNamespace(query=SimpleNamespace(filter_by=lambda **_: acks)),
+    )
+
+
+def _logout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fake an anonymous visitor."""
+    monkeypatch.setattr(
+        services_module,
+        "current_user",
+        SimpleNamespace(is_authenticated=False),
+    )
 
 
 def test_is_shown_to_users() -> None:
@@ -103,3 +141,70 @@ def test_in_time_window_handles_timezones() -> None:
     )
     naive_past = (datetime.now(tz=UTC) - timedelta(hours=1)).replace(tzinfo=None)
     assert service._in_time_window({"starts_at": naive_past.isoformat()})
+
+
+def test_pending_for_guests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A guest gets the guests and all notices, rendered as plain data."""
+    _logout(monkeypatch)
+    app = _app(
+        NOTICES=[
+            {"key": "a", "show_to": "users", "title": "t", "intro": "i", "items": []},
+            {"key": "b", "show_to": "guests", "title": "t", "intro": "i", "items": []},
+            {"key": "c", "show_to": "all", "title": "t", "intro": "i", "items": ["x"]},
+        ],
+    )
+    with app.test_request_context():
+        pending = service.pending()
+    assert [notice["key"] for notice in pending] == ["b", "c"]
+    assert pending[1] == {
+        "key": "c",
+        "title": "t",
+        "intro": "i",
+        "items": ["x"],
+        "outro": "",
+        "accent": False,
+    }
+
+
+def test_pending_skips_acknowledged(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Acknowledged notices are not shown again."""
+    _login(monkeypatch, roles=set(), seen={"old"})
+    app = _app(
+        NOTICES=[
+            {"key": "old", "title": "t", "intro": "i", "items": []},
+            {"key": "new", "title": "t", "intro": "i", "items": []},
+        ],
+    )
+    with app.test_request_context():
+        pending = service.pending()
+    assert [notice["key"] for notice in pending] == ["new"]
+
+
+def test_pending_applies_all_filters(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Roles, feature and time window all have to match."""
+    _login(monkeypatch, roles={"curator"}, seen=set())
+    base = {"title": "t", "intro": "i", "items": []}
+    app = _app(
+        NOTICES=[
+            {"key": "role-ok", "roles": ["curator"], **base},
+            {"key": "role-no", "roles": ["admin"], **base},
+            {"key": "feature-off", "feature": "off", **base},
+            {"key": "too-early", "starts_at": _iso(timedelta(hours=1)), **base},
+        ],
+        NOTICES_FEATURES={"off": lambda: False},
+    )
+    with app.test_request_context():
+        pending = service.pending()
+    assert [notice["key"] for notice in pending] == ["role-ok"]
+
+
+def test_pending_notices_helper(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The template helper returns the pending notices."""
+    _logout(monkeypatch)
+    app = _app(
+        NOTICES=[
+            {"key": "a", "show_to": "all", "title": "t", "intro": "i", "items": []},
+        ],
+    )
+    with app.test_request_context():
+        assert [notice["key"] for notice in pending_notices()] == ["a"]
