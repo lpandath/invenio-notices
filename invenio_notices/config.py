@@ -6,6 +6,8 @@
 ``starts_at``/``ends_at`` are ISO-8601 strings and are compared in UTC.
 """
 
+from collections.abc import Callable
+
 from invenio_i18n import lazy_gettext as _
 
 NOTICES = []
@@ -37,7 +39,7 @@ Each notice is a dict:
 NOTICES_ACK_LABEL = _("Acknowledged")
 """Label for the notice acknowledge button."""
 
-NOTICES_FEATURES = {}
+NOTICES_FEATURES: dict[str, Callable[[], bool]] = {}
 """Feature checks by name, e.g. ``{"oer_v2": config_flag("OER_V2")}``.
 
 A check is a no-argument callable returning ``bool``, see
