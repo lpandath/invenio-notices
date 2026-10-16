@@ -53,6 +53,9 @@ invenio_notices = "invenio_notices:alembic"
 [project.entry-points."invenio_db.models"]
 invenio_notices = "invenio_notices.records.models"
 
+[project.entry-points."invenio_i18n.translations"]
+messages = "invenio_notices"
+
 [project.urls]
 Repository = "https://github.com/tu-graz-library/invenio-notices"
 
