@@ -26,6 +26,7 @@ requires-python = ">=3.14"
 dependencies = [
   "flask-resources>=1.0.0",
   "invenio-accounts>=8.0.0",
+  "invenio-assets>=4.0.0",
   "invenio-db>=2.0.0",
   "invenio-i18n>=3.0.0",
 ]
@@ -36,6 +37,9 @@ tests = [
   "pytest-invenio>=4.0.0",
   "ruff>=0.9.6",
 ]
+
+[project.entry-points."invenio_assets.webpack"]
+invenio_notices = "invenio_notices.webpack:theme"
 
 [project.entry-points."invenio_base.apps"]
 invenio_notices = "invenio_notices:InvenioNotices"
