@@ -41,6 +41,9 @@ tests = [
 [project.entry-points."invenio_assets.webpack"]
 invenio_notices = "invenio_notices.webpack:theme"
 
+[project.entry-points."invenio_base.api_blueprints"]
+invenio_notices = "invenio_notices.views:create_notices_bp"
+
 [project.entry-points."invenio_base.apps"]
 invenio_notices = "invenio_notices:InvenioNotices"
 
