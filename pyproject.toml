@@ -47,6 +47,9 @@ invenio_notices = "invenio_notices.views:create_notices_bp"
 [project.entry-points."invenio_base.apps"]
 invenio_notices = "invenio_notices:InvenioNotices"
 
+[project.entry-points."invenio_base.blueprints"]
+invenio_notices = "invenio_notices.views:blueprint"
+
 [project.entry-points."invenio_base.finalize_app"]
 invenio_notices = "invenio_notices.ext:finalize_app"
 

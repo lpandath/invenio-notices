@@ -7,6 +7,13 @@ from flask import Blueprint, Flask
 
 from .resources import NoticesResource, NoticesResourceConfig
 
+blueprint = Blueprint(
+    "invenio_notices_ext",
+    __name__,
+    template_folder="templates",
+)
+"""Blueprint used to register the templates folder."""
+
 
 def create_notices_bp(_app: Flask) -> Blueprint:
     """Create the notices resource blueprint."""
