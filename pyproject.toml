@@ -44,6 +44,9 @@ invenio_notices = "invenio_notices.webpack:theme"
 [project.entry-points."invenio_base.apps"]
 invenio_notices = "invenio_notices:InvenioNotices"
 
+[project.entry-points."invenio_base.finalize_app"]
+invenio_notices = "invenio_notices.ext:finalize_app"
+
 [project.entry-points."invenio_db.alembic"]
 invenio_notices = "invenio_notices:alembic"
 
